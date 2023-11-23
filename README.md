@@ -34,7 +34,7 @@ Open `http://<PUBLIC_IP or 0.0.0.0>:10356` in your browser.
 ## Configuration
 
 You can configure the app's behavior at `server/config.py`.
-For example, if you have less than 6GB of VRAM, you can use xformers with set as below in `server/config.py`.
+For example, if you have less than 8GB of VRAM, you can use xformers with set as below in `server/config.py`.
 
 ```diff
 -torch_compile: bool = True
