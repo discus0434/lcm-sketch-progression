@@ -1,2 +1,3 @@
-def hello():
-    return "Hello from app!"
+from .progressor import Progressor
+
+__all__ = ["Progressor"]

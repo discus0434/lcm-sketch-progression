@@ -1,9 +1,23 @@
-import React, { useRef, useEffect, useCallback } from "react";
+import React, { useRef, useEffect, useCallback, useState } from "react";
+import { Paper, Typography } from "@mui/material";
 
-function DrawingApp() {
+function getRandomColor() {
+  const letters = "0123456789ABCDEF";
+  let color = "#";
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
+function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [currentColor, setCurrentColor] = useState("#000000");
+  const [currentPrompt, setCurrentPrompt] = useState(
+    "psychedelic structure, high quality"
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -16,20 +30,46 @@ function DrawingApp() {
           canvas.height = image.height;
           ctx.drawImage(image, 0, 0, image.width, image.height);
         };
-        image.src = "images/myImage.jpg";
+        image.src = "images/white.jpg";
       }
     }
   }, []);
+
+  useEffect(() => {
+    const colorChangeInterval = setInterval(() => {
+      setCurrentColor(getRandomColor());
+    }, 10000);
+
+    return () => clearInterval(colorChangeInterval);
+  }, []);
+
+  const sendUpdatePrompt = useCallback(async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:9090/update_prompt", {
+        method: "GET",
+      });
+      const data = await response.json();
+      setCurrentPrompt(data.prompt);
+    } catch (error) {
+      console.error("Error sending image:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      sendUpdatePrompt();
+    }, 45000);
+  }, [sendUpdatePrompt]);
 
   const sendImage = useCallback(async (base64Image: string) => {
     try {
       const response = await fetch("http://127.0.0.1:9090/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64Image }),
+        body: JSON.stringify({ base64_image: base64Image }),
       });
       const data = await response.json();
-      updateCanvas(data.image);
+      updateCanvas(data.base64_image);
     } catch (error) {
       console.error("Error sending image:", error);
     }
@@ -56,9 +96,10 @@ function DrawingApp() {
     if (canvas && ctx) {
       const image = new Image();
       image.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
       };
-      image.src = newImageBase64;
+      image.src = `data:image/jpeg;base64,${newImageBase64}`;
     }
   };
 
@@ -77,6 +118,19 @@ function DrawingApp() {
     if (!isDrawing) return;
     const ctx = canvasRef.current?.getContext("2d");
     if (ctx) {
+      // line
+      ctx.strokeStyle = currentColor;
+      ctx.lineWidth = 150;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+
+      // shadow
+      ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetX = 5;
+      ctx.shadowOffsetY = 5;
+
+      // draw
       ctx.beginPath();
       ctx.moveTo(lastX, lastY);
       ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
@@ -91,17 +145,50 @@ function DrawingApp() {
   };
 
   return (
-    <div>
-      <canvas
-        ref={canvasRef}
-        onMouseDown={startDrawing}
-        onMouseMove={draw}
-        onMouseUp={stopDrawing}
-        onMouseOut={stopDrawing}
-      />
+    <div
+      className="App"
+      style={{
+        backgroundColor: "#282c34",
+        height: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        margin: "0",
+        color: "#ffffff",
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: "#282c34",
+          alignItems: "center",
+          justifyContent: "center",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <Typography
+          variant="h6"
+          style={{ color: "#ffffff", padding: "4vh", fontFamily: "Kanit" }}
+        >
+          {currentPrompt}
+        </Typography>
+        <canvas
+          ref={canvasRef}
+          width="640px"
+          height="640px"
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseOut={stopDrawing}
+          style={{
+            border: "1px solid #000000",
+            borderRadius: "10px",
+            height: "80vh",
+          }}
+        />
+      </div>
       <img ref={imageRef} style={{ display: "none" }} alt="background" />
     </div>
   );
 }
-
-export default DrawingApp;
+export default App;

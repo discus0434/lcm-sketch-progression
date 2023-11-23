@@ -23,6 +23,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /lcm-sketch-progression
 
 COPY requirements.lock pyproject.toml README.md src /lcm-sketch-progression/
-RUN pip3 install -e .
+RUN pip3 install -r requirements.lock
 
 WORKDIR /app

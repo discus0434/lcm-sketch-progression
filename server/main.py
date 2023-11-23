@@ -1,106 +1,132 @@
-import gradio as gr
-import torch
-from diffusers import LatentConsistencyModelImg2ImgPipeline
-from PIL import Image, ImageChops
+import asyncio
+import base64
+import logging
+from io import BytesIO
+from pathlib import Path
 
-WIDTH = 256
-HEIGHT = 256
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from PIL import Image
+from pydantic import BaseModel
+
+from lcm_sketch_progression import Progressor
+
+logger = logging.getLogger("uvicorn")
+PROJECT_DIR = Path(__file__).parent.parent
 
 
-class LCM:
-    def __init__(
-        self,
-        model_id: str = "SimianLuo/LCM_Dreamshaper_v7",
-        initial_prompt: str = "psychedelic",
-    ):
-        self.pipeline = self._load_pipeline(model_id)
-        self._empty_image = Image.new(mode="RGB", size=(WIDTH, HEIGHT), color="white")
-        self._prompt = initial_prompt
-        self._prev_sketch_image = self._empty_image.copy()
-        self._prev_progressive_image = self._empty_image.copy()
+class PredictInputModel(BaseModel):
+    """
+    The input model for the /predict endpoint.
+    """
 
-    @property
-    def prompt(self) -> str:
-        return self._prompt
+    base64_image: str
 
-    @prompt.setter
-    def prompt(self, prompt: str) -> None:
-        self._prompt = prompt
 
-    def get_sketch(
-        self, progressive_image: Image.Image, sketch_image: Image.Image
-    ) -> tuple[Image.Image, Image.Image]:
-        self._prev_sketch_image = sketch_image
-        sketch_image = (
-            ImageChops.difference(sketch_image, self._prev_sketch_image)
-            .resize((WIDTH, HEIGHT))
-            .convert("L")
-            .point(lambda x: 0 if x < 30 else 1, "1")
+class PredictResponseModel(BaseModel):
+    """
+    The response model for the /predict endpoint.
+    """
+
+    base64_image: str
+
+
+class UpdatePromptResponseModel(BaseModel):
+    """
+    The response model for the /update_prompt endpoint.
+    """
+
+    prompt: str
+
+
+class Api:
+    def __init__(self, **config) -> None:
+        """
+        Initialize the API.
+
+        Parameters
+        ----------
+        config : dict
+            The configuration.
+        """
+        self.progressor = Progressor(**config)
+        self.app = FastAPI()
+        self.app.add_api_route(
+            "/predict",
+            self._predict,
+            methods=["POST"],
+            response_model=PredictResponseModel,
         )
-        progressive_image = progressive_image.resize((WIDTH, HEIGHT)).convert("RGBA")
-        progressive_image.paste(sketch_image, (0, 0), sketch_image)
-        self._prev_progressive_image = progressive_image
-
-        return self._prev_progressive_image
-
-    def progress(self) -> Image.Image:
-        try:
-            self._prev_progressive_image = self.pipeline(
-                prompt=self.prompt,
-                image=self._prev_progressive_image.resize((WIDTH, HEIGHT)),
-                num_inference_steps=1,
-                strength=0.5,
-                width=WIDTH,
-                height=HEIGHT,
-                guidance_scale=8.0,
-                lcm_origin_steps=10,
-                output_type="pil",
-            ).images[0]
-        except Exception:
-            pass
-
-        return self._prev_progressive_image
-
-    def _load_pipeline(self, model_id: str):
-        pipeline = LatentConsistencyModelImg2ImgPipeline.from_pretrained(model_id)
-        pipeline.safety_checker = None
-        pipeline.to(device="cuda", dtype=torch.float16)
-        return pipeline
-
-
-lcm = LCM()
-with gr.Blocks() as ui:
-    prompt = gr.Textbox(label="prompt", value=lcm.prompt)
-    with gr.Row():
-        sketch = gr.Image(
-            value=lcm._empty_image,
-            tool="color-sketch",
-            image_mode="RGB",
-            type="pil",
-            width=WIDTH,
-            height=HEIGHT,
+        self.app.add_api_route(
+            "/update_prompt",
+            self._update_prompt,
+            methods=["GET"],
+            response_model=UpdatePromptResponseModel,
         )
-        image = gr.Image(
-            value=lcm.progress,
-            image_mode="RGB",
-            type="pil",
-            width=WIDTH,
-            height=HEIGHT,
-            every=1,
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
         )
+        self._predict_lock = asyncio.Lock()
+        self._update_prompt_lock = asyncio.Lock()
 
-    sketch.change(
-        fn=lcm.get_sketch,
-        inputs=[image, sketch],
-        outputs=[image],
-        show_progress="hidden",
+    async def _predict(self, inp: PredictInputModel) -> PredictResponseModel:
+        """
+        Predict whether the text content is safe or not.
+
+        Parameters
+        ----------
+        inp : InputModel
+            The input model.
+
+        Returns
+        -------
+        PredictResponseModel
+            The prediction result.
+        """
+        async with self._predict_lock:
+            return PredictResponseModel(
+                base64_image=self._pil_to_base64(
+                    self.progressor.progress(self._base64_to_pil(inp.base64_image))
+                )
+            )
+
+    async def _update_prompt(self) -> UpdatePromptResponseModel:
+        """
+        Update the prompt and return the updated prompt.
+
+        Returns
+        -------
+        UpdatePromptResponseModel
+            The updated prompt.
+        """
+        async with self._update_prompt_lock:
+            self.progressor.update_prompt()
+            return UpdatePromptResponseModel(prompt=self.progressor.prompt)
+
+    def _pil_to_base64(self, image: Image.Image, format: str = "JPEG") -> bytes:
+        buffered = BytesIO()
+        image.convert("RGB").save(buffered, format=format)
+        return base64.b64encode(buffered.getvalue()).decode("ascii")
+
+    def _base64_to_pil(self, base64_image: str) -> Image.Image:
+        if "base64," in base64_image:
+            base64_image = base64_image.split("base64,")[1]
+        return Image.open(BytesIO(base64.b64decode(base64_image))).convert("RGB")
+
+
+if __name__ == "__main__":
+    from config import Config
+
+    config = Config()
+
+    uvicorn.run(
+        Api(**config.__dict__).app,
+        host=config.host,
+        port=config.port,
+        workers=config.workers,
     )
-
-    prompt.change(
-        fn=lambda x: lcm.__setattr__("prompt", x),
-        inputs=[prompt],
-        outputs=None,
-        show_progress="hidden",
-    )
-
-ui.queue().launch()

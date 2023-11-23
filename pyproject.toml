@@ -6,15 +6,19 @@ authors = [
     { name = "Verb", email = "discus0434@gmail.com" },
 ]
 dependencies = [
-    "torch>=2.1.1",
-    "torchvision>=0.16.1",
+    "torch==2.1.0+cu118",
+    "torchvision==0.16.0+cu118",
     "numpy>=1.24.4",
     "Pillow>=10.1.0",
     "diffusers>=0.23.1",
     "transformers>=4.35.2",
+    "RealESRGAN>=1.0",
+    "opencv-python>=4.8.1.78",
     "accelerate>=0.24.1",
     "fastapi>=0.104.1",
     "uvicorn>=0.24.0.post1",
+    "triton>=2.1.0",
+    "deepspeed>=0.12.3",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
@@ -22,13 +26,6 @@ requires-python = ">= 3.8"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.rye]
-managed = true
-dev-dependencies = [
-    "black>=23.11.0",
-    "isort>=5.12.0",
-]
 
 [tool.hatch.metadata]
 allow-direct-references = true

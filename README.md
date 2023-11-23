@@ -1,3 +1,1 @@
-# app
-
-Describe your project here.
+# LCM Sketch Progression
