@@ -109,11 +109,40 @@ class Api:
             return UpdatePromptResponseModel(prompt=self.progressor.prompt)
 
     def _pil_to_base64(self, image: Image.Image, format: str = "JPEG") -> bytes:
+        """
+        Convert a PIL image to base64.
+
+        Parameters
+        ----------
+        image : Image.Image
+            The PIL image.
+
+        format : str
+            The image format, by default "JPEG".
+
+        Returns
+        -------
+        bytes
+            The base64 image.
+        """
         buffered = BytesIO()
         image.convert("RGB").save(buffered, format=format)
         return base64.b64encode(buffered.getvalue()).decode("ascii")
 
     def _base64_to_pil(self, base64_image: str) -> Image.Image:
+        """
+        Convert a base64 image to PIL.
+
+        Parameters
+        ----------
+        base64_image : str
+            The base64 image.
+
+        Returns
+        -------
+        Image.Image
+            The PIL image.
+        """
         if "base64," in base64_image:
             base64_image = base64_image.split("base64,")[1]
         return Image.open(BytesIO(base64.b64decode(base64_image))).convert("RGB")

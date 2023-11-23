@@ -9,6 +9,14 @@ from transformers import pipeline
 
 class Progressor:
     def __init__(self, **config):
+        """
+        Initialize the progressor.
+
+        Parameters
+        ----------
+        config : dict
+            The configuration.
+        """
         self.config = config
         self.target_resolution = self.config["target_resolution"]
         self.generation_resolution = self.config["generation_resolution"]
@@ -25,6 +33,19 @@ class Progressor:
         self.prompt_pipeline = self._load_prompt_pipeline()
 
     def progress(self, progressive_image: Image.Image) -> Image.Image:
+        """
+        Progress the generation.
+
+        Parameters
+        ----------
+        progressive_image : Image.Image
+            The image to be progressed.
+
+        Returns
+        -------
+        Image.Image
+            The progressed image.
+        """
         progressive_image = self.lcm_pipeline(
             prompt=self.prompt,
             negative_prompt=self.config["negative_prompt"],
@@ -48,11 +69,30 @@ class Progressor:
             )
 
     def update_prompt(self) -> None:
+        """
+        Update the prompt with generating words brought up by the
+        random prefix.
+        """
         self.prompt = self.prompt_pipeline(
-            random.choice(self._prefixs), max_length=random.randint(10, 25)
+            random.choice(self._prefixes), max_length=random.randint(10, 25)
         )[0]["generated_text"].strip()
 
     def _load_lcm_pipeline(self) -> LatentConsistencyModelImg2ImgPipeline:
+        """
+        Load the LCM pipeline.
+
+        To optimize the performance, the LCM pipeline will be:
+
+        1. inferred with float16
+        2.a. compiled with `torch.compile` if `torch_compile` is True
+        2.b. enabled with `xformers` if `xformers` is True
+        3. warmed up with an empty image
+
+        Returns
+        -------
+        LatentConsistencyModelImg2ImgPipeline
+            The LCM pipeline.
+        """
         lcm_pipeline = LatentConsistencyModelImg2ImgPipeline.from_pretrained(
             self.config["lcm_model_id"],
             safety_checker=None,
@@ -85,6 +125,18 @@ class Progressor:
         return lcm_pipeline
 
     def _load_esrgan_model(self) -> RealESRGAN | None:
+        """
+        Load the ESRGAN model.
+
+        To optimize the performance, the ESRGAN model will be compiled
+        with `torch.compile` if `torch_compile` is True.
+
+        Returns
+        -------
+        RealESRGAN | None
+            The ESRGAN model. If super resolution is not used, this will
+            be None.
+        """
         esrgan_model = None
         if self.config["use_super_resolution"]:
             esrgan_model = RealESRGAN(
@@ -109,6 +161,14 @@ class Progressor:
         return esrgan_model
 
     def _load_prompt_pipeline(self):
+        """
+        Load the prompt pipeline.
+
+        Returns
+        -------
+        pipeline
+            The prompt pipeline.
+        """
         prompt_pipeline = pipeline(
             "text-generation",
             model=self.config["prompt_model_id"],
@@ -118,7 +178,10 @@ class Progressor:
         return prompt_pipeline
 
     @property
-    def _prefixs(self) -> list[str]:
+    def _prefixes(self) -> list[str]:
+        """
+        The prefixes for the prompt.
+        """
         return [
             "psychedelic structure of",
             "landscape of",
