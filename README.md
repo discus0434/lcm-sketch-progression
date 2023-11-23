@@ -45,7 +45,7 @@ For example, if you have less than 6GB of VRAM, you can use xformers with set as
 
 ## Requirements
 
-- Computer with more than 6GB of VRAM
+- NVIDIA GPU more than 6GB of VRAM
 - Docker
 
 ## License
