@@ -1,0 +1,34 @@
+[project]
+name = "lcm-sketch-progression"
+version = "0.1.0"
+description = "LCM powered something"
+authors = [
+    { name = "Verb", email = "discus0434@gmail.com" },
+]
+dependencies = [
+    "torch>=2.1.1",
+    "torchvision>=0.16.1",
+    "numpy>=1.24.4",
+    "Pillow>=10.1.0",
+    "diffusers>=0.23.1",
+    "transformers>=4.35.2",
+    "accelerate>=0.24.1",
+    "fastapi>=0.104.1",
+    "uvicorn>=0.24.0.post1",
+]
+readme = "README.md"
+requires-python = ">= 3.8"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = [
+    "black>=23.11.0",
+    "isort>=5.12.0",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
