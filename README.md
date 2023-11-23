@@ -1,6 +1,6 @@
 # LCM Sketch Progression
 
-**LCM Sketch Progression is a web app that performs real-time image generation and allows you to actively intervene in the progress with a brush.**
+**LCM Sketch Progression is a playground web app that performs real-time image generation and allows you to actively intervene in the progress with a brush.**
 
 <p align="center">
   <img src="./assets/sample.gif" width=85%>
