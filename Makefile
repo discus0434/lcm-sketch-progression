@@ -1,34 +1,25 @@
-NAME=lcm-sketch-progression
-TAG=0.1
-PARENT_DIRECTORY = $(shell pwd)
-
-.PHONY: build run
+.PHONY: install-rye build up
 
 build:
-	docker build -t ${NAME}:${TAG} -f Dockerfile .
+	sudo cp -r src docker \
+	&& sudo cp -r view docker \
+	&& sudo cp -r server docker \
+	&& sudo cp requirements.lock docker \
+	&& sudo cp pyproject.toml docker \
+	&& sudo cp README.md docker \
+	&& cd docker \
+	&& docker-compose build;
 
-run:
-	@if [ `docker container ls -a --filter "name=${NAME}" | wc -l | sed "s/ //g"` -eq 2 ]; then \
-		docker container stop ${NAME}; \
-		docker container rm ${NAME}; \
-		docker container run \
-			-it --privileged \
-			--gpus all \
-			-d \
-			-v ${PARENT_DIRECTORY}:/app \
-			-v /var/run/docker.sock:/var/run/docker.sock \
-			--name ${NAME} ${NAME}:${TAG} \
-			/bin/bash; \
-	else \
-		docker container run \
-			-it --privileged \
-			--gpus all \
-			-d \
-			-v ${PARENT_DIRECTORY}:/app \
-			-v /var/run/docker.sock:/var/run/docker.sock \
-			--name ${NAME} ${NAME}:${TAG} \
-			/bin/bash; \
-	fi
+up:
+	if [ -e "docker/pyproject.toml" ]; then \
+		sudo rm -rf docker/src; \
+		sudo rm -rf docker/view; \
+		sudo rm -rf docker/server; \
+		sudo rm -rf docker/requirements.lock; \
+		sudo rm -rf docker/pyproject.toml; \
+		sudo rm -rf docker/README.md; \
+	fi \
+	&& cd docker && docker-compose up;
 
 install-rye:
 	curl -sSf https://rye-up.com/get | bash \
