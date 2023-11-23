@@ -10,7 +10,7 @@
 
 - The app generates an image based on the previous state of the image.
 - You can intervene in the progress of the image generation by drawing on the canvas with a brush.
-- The prompt is updated periodically and randomly, so the generated image keeps changing uniquely.
+- As the prompt is updated periodically and randomly, the generated image keeps changing uniquely.
 
 
 ## Installation
