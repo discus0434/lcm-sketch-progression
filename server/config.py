@@ -70,7 +70,7 @@ class Config:
     inference_steps: int = 2
     # The number of inference steps for the LCM. The higher the number,
     # the change in the image will be more aggressive.
-    strength: float = 0.35
+    strength: float = 0.4
     # Guidance scale for the LCM. The higher the number, the more
     # aligned the image will be with the prompt.
     guidance_scale: float = 8.0
