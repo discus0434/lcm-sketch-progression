@@ -81,7 +81,7 @@ function App() {
         const base64Image = canvasRef.current.toDataURL("image/png");
         sendImage(base64Image);
       }
-    }, 1000);
+    }, 750);
 
     return () => {
       if (intervalRef.current) {
