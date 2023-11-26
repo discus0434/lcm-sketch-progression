@@ -1,7 +1,7 @@
 import random
 
 import torch
-from diffusers import LatentConsistencyModelImg2ImgPipeline
+from diffusers import AutoencoderTiny, LatentConsistencyModelImg2ImgPipeline
 from PIL import Image
 from RealESRGAN import RealESRGAN
 from transformers import pipeline
@@ -95,8 +95,10 @@ class Progressor:
         """
         lcm_pipeline = LatentConsistencyModelImg2ImgPipeline.from_pretrained(
             self.config["lcm_model_id"],
-            safety_checker=None,
+            safety_checker=None,            
+            feature_extractor=None,
         )
+        lcm_pipeline.vae = AutoencoderTiny.from_pretrained(self.config["vae_model_id"])
         lcm_pipeline.to(
             device=self.config["device"],
             dtype=torch.float16 if self.config["dtype"] == "float16" else torch.float32,
@@ -114,13 +116,14 @@ class Progressor:
         if self.config["xformers"]:
             lcm_pipeline.enable_xformers_memory_efficient_attention()
 
-        # Warmup
-        lcm_pipeline(
-            prompt="warmup",
-            image=self._empty_image,
-            num_inference_steps=1,
-            guidance_scale=8.0,
-        )
+        for _ in range(3):
+            # Warmup
+            lcm_pipeline(
+                prompt="warmup",
+                image=self._empty_image,
+                num_inference_steps=1,
+                guidance_scale=8.0,
+            )
 
         return lcm_pipeline
 
