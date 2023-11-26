@@ -15,7 +15,7 @@ class Config:
     # returned to the client.
     # If use_super_resolution is True, the target resolution will be
     # multiplied by superres_scale.
-    target_resolution: int = 640
+    target_resolution: int = 512
 
     ####################################################################
     # Server
@@ -50,6 +50,7 @@ class Config:
     ####################################################################
     # The LCM model will be used to generate the image.
     lcm_model_id: str = "SimianLuo/LCM_Dreamshaper_v7"
+    vae_model_id: str = "madebyollin/taesd"
     # Torch dtype of the LCM model. If you have only CPU or nice GPU,
     # you can set this to float32. Otherwise, you should set this to
     # float16.
@@ -58,7 +59,7 @@ class Config:
     # The higher the resolution, the slower the generation will be and
     # the more memory it will require. However, the output image will
     # be higher quality.
-    generation_resolution: int = 320
+    generation_resolution: int = 512
     # Initial prompt for the LCM. This prompt will be used to generate
     # images in the first 45 seconds.
     initial_prompt: str = "psychedelic structure, high quality"
@@ -76,7 +77,7 @@ class Config:
     guidance_scale: float = 8.0
     # LDM pretends to denoise the number of steps below.
     # IDK what this actually affects.
-    original_inference_steps: int = 12
+    original_inference_steps: int = 50
 
     ####################################################################
     # Super Resolution
@@ -84,7 +85,7 @@ class Config:
     # Whether to use super resolution. If this is True, the image will
     # be generated at a lower resolution and then upscaled to the
     # target resolution.
-    use_super_resolution: bool = True
+    use_super_resolution: bool = False
     # The scale of the super resolution. If you set this to 2,
     # target_resolution must be equal to generation_resolution * 2.
     superres_scale: Literal[2, 4, 8] = 2
